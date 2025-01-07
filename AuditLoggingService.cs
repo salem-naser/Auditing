@@ -18,11 +18,14 @@ namespace Auditing
 
         public async Task LogAuditEntity(IEnumerable<EntityEntry> auditLogs, string userName, long userId, HashSet<string> userDefinedKeys = null)
         {
+           // Initialize user-defined keys if not provided user-defined to link the audit data with this key
             userDefinedKeys ??= new HashSet<string>();
+            // Process each entity entry and publish audit logs.
             var publishTasks = auditLogs.Select(async entry =>
             {
                 try
                 {
+                    // Get changes in the entity and its nested properties.
                     var rootChanges = GetChangedProperties(entry);
                     var nestedChanges = GetNestedChanges(entry);
                     var allChanges = rootChanges.Concat(nestedChanges).ToDictionary(k => k.Key, v => v.Value);
@@ -44,10 +47,12 @@ namespace Auditing
 
         private async Task PublishAuditLogForEntity(EntityEntry entry, Dictionary<string, ChangeValues> changes, string userName, long userId, HashSet<string> userDefinedKeys)
         {
+           // Retrieve primary and foreign keys of the entity.
             var rootId = GetPrimaryKey(entry);
             var foreignKeys = GetForeignKeys(entry)
                .ToDictionary(k => k.Key, v => v.Value.ToString());
-
+               
+            // Get any special keys to include in the audit log.
             var specialKeys = userDefinedKeys.Count > 0
            ? GetSpecialKeys(entry, rootId, foreignKeys, userDefinedKeys)
            : new List<KeyEntry>();
@@ -69,7 +74,8 @@ namespace Auditing
                 PrimaryKey = rootId
             });
         }
-
+        
+        // Gets a dictionary of properties that have changed for the entity.
         private static Dictionary<string, ChangeValues> GetChangedProperties(EntityEntry entry)
         {
             var changes = new Dictionary<string, ChangeValues>();
